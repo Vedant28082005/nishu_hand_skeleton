@@ -11,3 +11,4 @@ signtalk/eval_results.csv
 signtalk/calibration.json
 __pycache__/
 *.pyc
+signtalk_v2.tar.gz

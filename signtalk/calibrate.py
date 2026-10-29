@@ -21,6 +21,7 @@ from gate import MotionGate
 DEFAULT_PATH = "calibration.json"
 MIN_START = 0.006          # never go below this even for a perfectly steady tracker
 START_HEADROOM = 1.25      # x the 99th percentile of resting jitter
+MAX_PLAUSIBLE_START = 0.05  # warn above this: shoulder-widths/frame at rest is not this large
 STOP_RATIO = 0.4           # stop_velocity = start_velocity * ratio (hysteresis)
 
 
@@ -70,6 +71,11 @@ def run_calibration(read_frame, seconds: float = 5.0, countdown: float = 2.0,
     res.update({"measured_fps": round(fps, 2), "frames": len(frames),
                 "seconds": round(elapsed, 2), "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
                 "camera": camera_info or {}})
+    if res["start_velocity"] > MAX_PLAUSIBLE_START:
+        print(f"[calibrate] WARNING: resting jitter is very high (start_velocity "
+              f"{res['start_velocity']} > {MAX_PLAUSIBLE_START}). Either you moved during sampling "
+              f"or the tracker is unstable here (lighting? hands/arms in frame?). Re-run before trusting this.")
+        res["warning"] = "high resting velocity; re-run"
     Path(out_path).write_text(json.dumps(res, indent=2))
     print(f"[calibrate] {len(frames)} frames @ {fps:.1f} fps; resting jitter "
           f"p99={res['rest_velocity']['p99']} -> start_velocity={res['start_velocity']} "

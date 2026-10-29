@@ -75,6 +75,11 @@ def parse_args(argv=None):
     p.add_argument("--phrase-gap", type=float, default=1.5,
                    help="seconds of stillness before the buffered phrase is spoken")
     # admission
+    p.add_argument("--top1-threshold", type=float, default=0.30,
+                   help="confident-commit probability (and tick-mode 'stable')")
+    p.add_argument("--top2-threshold", type=float, default=0.10,
+                   help="band admission floor for top-1 and the runner-up")
+    p.add_argument("--player", default="aplay", help="command used to play a WAV (-q <file> appended)")
     p.add_argument("--reject-threshold", type=float, default=DEFAULT_REJECT,
                    help="top-1 probability floor; below it nothing is emitted")
     # gate / calibration
@@ -261,8 +266,9 @@ def main(argv=None) -> None:
     print(f"[warmup] one dummy inference: {warm * 1000:.0f} ms ({model.name})")
 
     gate = MotionGate(**gate_kw)
-    engine = Engine(model, gate, TokenAdmitter(), args.reject_threshold)
-    speaker = None if args.no_audio else Speaker(Path(args.wavs))
+    engine = Engine(model, gate, TokenAdmitter(args.top1_threshold, args.top2_threshold),
+                    args.reject_threshold)
+    speaker = None if args.no_audio else Speaker(Path(args.wavs), player=args.player)
     phrase = PhraseBuffer(flush_after_s=args.phrase_gap)
     logger = None if args.no_log else SessionLogger(args.session_dir, meta={
         "argv": vars(args), "model": model.name, "labels_are_real": getattr(model, "labels_are_real", True),
@@ -285,13 +291,10 @@ def main(argv=None) -> None:
         while not stop.is_set():
             if args.show:
                 try:
-                    img = show_q.get(timeout=0.05)
-                    import cv2 as _cv
-                    _cv.imshow("signtalk", img)
+                    cv2.imshow("signtalk", show_q.get(timeout=0.05))
                 except Empty:
                     pass
-                import cv2 as _cv
-                if _cv.waitKey(1) & 0xFF == ord("q"):
+                if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
             else:
                 time.sleep(0.1)

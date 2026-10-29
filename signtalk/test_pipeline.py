@@ -361,4 +361,34 @@ check("too few samples is a clear error", ok)
 print("\n15. model warmup")
 check(f"PopSign warmup runs one dummy inference ({clf.warmup() * 1000:.0f} ms)", True)
 
+print("\n16. ASL Citizen ONNX end-to-end (skipped if models/aslcitizen_stgcn.onnx is absent)")
+ACM = os.environ.get("ASLC_MODEL", "models/aslcitizen_stgcn.onnx")
+if os.path.exists(ACM):
+    acm = ac.AslCitizenClassifier(ACM, "models/aslcitizen_gloss.json")
+    ww = emitted[0]
+    pr = acm.predict(ww)
+    check(f"{acm.vocab_size} classes", acm.vocab_size == 2731 and pr.shape == (2731,))
+    check("probs sum to 1", abs(float(pr.sum()) - 1.0) < 1e-6)
+    check("top-3 labels carry placeholder names until a gloss file is supplied",
+          all(l.startswith("sign_") for l, _ in acm.top_k(pr, 3)))
+    check("labels_are_real is False without a gloss file", acm.labels_are_real is False)
+    if TORCH:
+        import copy
+        import export_stgcn as _E
+        _net, _, _ = _E.build(Path("models/ASL_citizen_stgcn_weights.pt"))
+        with torch.no_grad():
+            _ref = torch.softmax(_net(torch.from_numpy(ac.preprocess(ww)[None])), -1).numpy().ravel()
+        check(f"adapter+ONNX == adapter+torch checkpoint forward (max prob diff {np.abs(_ref - pr).max():.1e})",
+              bool(np.abs(_ref - pr).max() < 1e-4) and int(_ref.argmax()) == int(pr.argmax()))
+    for T in (16, 32, 64, 90, 128, 200):
+        wT = np.random.default_rng(T).random((T, N_TOTAL, 3)).astype(np.float32)
+        acm.predict(wT)
+        t0 = time.perf_counter()
+        for _ in range(5):
+            acm.predict(wT)
+        print(f"       ASL Citizen T={T:3d}  {(time.perf_counter() - t0) / 5 * 1000:6.2f} ms/inference (preprocess + ONNX)")
+    print(f"       ASL Citizen warmup: {acm.warmup() * 1000:.0f} ms")
+else:
+    print("  SKIP  models/aslcitizen_stgcn.onnx not present (run export_stgcn.py)")
+
 print("\nALL CHECKS PASSED")
