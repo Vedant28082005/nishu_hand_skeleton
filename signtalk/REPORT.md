@@ -8,6 +8,8 @@ Second most important: **MediaPipe works in this sandbox (GATE 1 passed)**, so t
 
 ---
 
+**Follow-up search for real clips (after the run above):** reachable hosts are only PyPI, npm, `raw.githubusercontent.com`, `storage.googleapis.com` (MediaPipe bundles/assets) and plain GitHub release assets. Unreachable (HTTP 000/403): Hugging Face, Kaggle, Zenodo, OSF, Mendeley, DagsHub, YouTube, Wikimedia, SignASL, HandSpeak, the GitHub API. npm/PyPI searches found only downloader packages (e.g. `sign-language-datasets`) that point at those blocked hosts, and the signchat repo's README lists no sample clips. So no labelled sign videos could be obtained legitimately, and accuracy remains NOT MEASURED. I did not use synthetic or self-labelled clips as a substitute.
+
 ## (a) GATE 1 — can MediaPipe run? **YES**
 
 - This session's network differed from the earlier one: `storage.googleapis.com` was reachable, so the official bundles downloaded directly (`hand_landmarker.task` 7.8 MB, `pose_landmarker_lite.task` 5.8 MB, `face_landmarker.task` 3.8 MB). No assembling needed.
