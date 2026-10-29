@@ -1,0 +1,13 @@
+signtalk/models/*.onnx
+signtalk/models/*.pt
+signtalk/models/*.task
+signtalk/models/*.zip
+signtalk/sessions/
+signtalk/wavs/
+signtalk/eval_clips/*.mp4
+signtalk/eval_clips/*.mov
+signtalk/eval_clips/*.webm
+signtalk/eval_results.csv
+signtalk/calibration.json
+__pycache__/
+*.pyc
