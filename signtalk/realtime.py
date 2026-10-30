@@ -60,6 +60,9 @@ def parse_args(argv=None):
     p.add_argument("--tasks", default="models", help="dir holding *.task bundles")
     p.add_argument("--wavs", default="wavs", help="pre-rendered WAVs, one per word")
     p.add_argument("--camera", type=int, default=0)
+    p.add_argument("--url", default=None,
+                   help="network camera stream, treated as a LIVE camera (e.g. IP Webcam app: "
+                        "http://192.168.29.233:8080/video)")
     p.add_argument("--video", default=None, help="read this file instead of a camera (testing)")
     p.add_argument("--width", type=int, default=640)
     p.add_argument("--height", type=int, default=480)
@@ -102,9 +105,12 @@ class Capture(threading.Thread):
     def __init__(self, args, frame_q: Queue, stats: DropStats, stop: threading.Event):
         super().__init__(daemon=True, name="capture")
         self.args, self.q, self.stats, self.stop = args, frame_q, stats, stop
-        self.is_file = args.video is not None
-        self.cap = cv2.VideoCapture(args.video if self.is_file else args.camera)
-        if not self.is_file:
+        self.is_file = args.video is not None and not args.url
+        src = args.url or (args.video if self.is_file else args.camera)
+        self.cap = cv2.VideoCapture(src)
+        if args.url:
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)     # don't let the stream lag behind
+        elif not self.is_file:
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, args.width)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, args.height)
             self.cap.set(cv2.CAP_PROP_FPS, args.fps)
@@ -237,7 +243,7 @@ def main(argv=None) -> None:
     cap_stats = DropStats()
     cap = Capture(args, frame_q, cap_stats, stop)
     if not cap.opened:
-        raise SystemExit(f"cannot open {'video ' + args.video if args.video else 'camera ' + str(args.camera)}")
+        raise SystemExit(f"cannot open {'url ' + args.url if args.url else 'video ' + args.video if args.video else 'camera ' + str(args.camera)}")
 
     det = mpdetect.build_detectors(Path(args.tasks), not args.no_face)
 

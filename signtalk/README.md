@@ -93,6 +93,7 @@ intervals, not the point estimate.
 ```bash
 python realtime.py --calibrate --no-face      # once per camera / frame rate; writes calibration.json
 python realtime.py --show                     # laptop, with debug overlay
+python realtime.py --url http://<phone-ip>:8080/video   # phone as camera (IP Webcam app); re-run --calibrate for this source
 python realtime.py --width 640 --height 480 --fps 15 --threads 3 --no-face   # Pi
 ```
 
